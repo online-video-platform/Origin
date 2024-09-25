@@ -12,9 +12,10 @@ function djb2(str) {
     return hash >>> 0;
 }
 
-let cachePath = '/cached/';
+let serverPort = process.env.PORT || 3001;
+let cachePath = process.env.CACHE_PATH || '/cached/';
 const app = express();
-const target = 'http://nginx:80';
+const target = process.env.TARGET || 'http://nginx:80';
 const proxy = httpProxy.createProxyServer({ target });
 
 app.use(async (req, res) => {
@@ -56,6 +57,6 @@ app.use(async (req, res) => {
     }
 });
 
-app.listen(3001, () => {
+app.listen(serverPort, () => {
     console.log('Server is running on port 3001');
 });

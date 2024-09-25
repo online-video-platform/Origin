@@ -5,7 +5,7 @@ services:
     stop_grace_period: 1s
     volumes:
       - ./src/index.js:/app/src/index.js
-      - ./cache/:/app/cache/
+      - ./cached/:/cached/
     ports:
       - 8090:3001
     healthcheck:
@@ -26,7 +26,7 @@ services:
       origin-proxy:
         condition: service_healthy
     command:
-      curl --progress-bar "http://origin-proxy:3001/stream/Blink.Twice.2024.1080p.WEBRip.1400MB.DD5.1.x264-GalaxyRG.mkv?link=fb5dadba6cb9632974bb15e3ed19ad4bfc3b71ea&index=1&play" -o /dev/null
+      curl --progress-bar "http://origin-proxy:3001/stream/Sintel.mp4?link=08ada5a7a6183aae1e09d831df6748d566095a10&index=6&play" -o /dev/null
   nginx:
     image: nginx:latest
     stop_grace_period: 1s

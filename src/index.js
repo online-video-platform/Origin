@@ -1,8 +1,8 @@
-const express = require('express');
-const httpProxy = require('http-proxy');
-const fs = require('fs');
-const path = require('path');
-const fetch = require('node-fetch'); // Ensure you have node-fetch installed
+import express from 'express';
+import httpProxy from 'http-proxy';
+import fs from 'fs';
+import path from 'path';
+import fetch from 'node-fetch'; // Ensure you have node-fetch installed
 
 function djb2(str) {
     let hash = 5381;

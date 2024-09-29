@@ -3,6 +3,7 @@ import httpProxy from 'http-proxy';
 import fs from 'fs';
 import path from 'path';
 import fetch from 'node-fetch'; // Ensure you have node-fetch installed
+import memoize from 'memoizee';
 
 function djb2(str) {
     let hash = 5381;
@@ -18,7 +19,22 @@ const app = express();
 const target = process.env.TARGET || 'http://nginx:80';
 const proxy = httpProxy.createProxyServer({ target });
 async function downloadRemoteFile(unfinishedDownloadPath, cachedDownloadPath, targetUrl){
+    console.log('Checking if file exists', cachedDownloadPath);
+    if (fs.existsSync(unfinishedDownloadPath)) {
+        fs.unlinkSync(unfinishedDownloadPath);
+    }
+    console.log('Creating download stream');
     let cachedDownloadStream = fs.createWriteStream(unfinishedDownloadPath);
+    let headed = await fetch(targetUrl, {method: 'HEAD'});
+    let contentLength = headed.headers.get('content-length');
+    let interval = setInterval(() => {
+        let stats = fs.statSync(unfinishedDownloadPath);
+        let downloaded = stats.size;
+        console.log('Downloaded', downloaded, 'out of', contentLength);
+        if (downloaded >= contentLength) {
+            clearInterval(interval);
+        }
+    }, 1000);
     let fetching = await fetch(targetUrl);
     console.log('Downloading from', targetUrl);
     let arrayBuffer = await fetching.arrayBuffer();
@@ -28,6 +44,7 @@ async function downloadRemoteFile(unfinishedDownloadPath, cachedDownloadPath, ta
     cachedDownloadStream.end();
     fs.renameSync(unfinishedDownloadPath, cachedDownloadPath);
 };
+let downloadRemoteFileMemoized = memoize(downloadRemoteFile);
 
 app.use(async (req, res) => {
     if (req.url.startsWith('/stream/')) {
@@ -40,14 +57,14 @@ app.use(async (req, res) => {
             console.log('Transcoding');
             let cachedDownloadPath = path.join(cachePath, "downloaded_" + filename + '.mkv');
             let unfinishedDownloadPath = cachedDownloadPath + '.part';
-            console.log('Downloading from', target + req.url);
+            console.log('Will downloading from', target + req.url);
             if (!fs.existsSync(cachePath)) {
                 fs.mkdirSync(cachePath);
             }
             if (fs.existsSync(cachedDownloadPath)) {
                 console.log('Downloaded file already exists, ', cachedDownloadPath);
             } else {
-            await downloadRemoteFile(unfinishedDownloadPath, cachedDownloadPath, target + req.url);
+            await downloadRemoteFileMemoized(unfinishedDownloadPath, cachedDownloadPath, target + req.url);
             }
             res.sendFile(cachedDownloadPath);
         }

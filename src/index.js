@@ -48,7 +48,7 @@ async function downloadRemoteFile(unfinishedDownloadPath, cachedDownloadPath, ta
     });
     fs.renameSync(unfinishedDownloadPath, cachedDownloadPath);
 };
-let downloadRemoteFileMemoized = memoize(downloadRemoteFile);
+let downloadRemoteFileMemoized = memoize(downloadRemoteFile, {maxAge: 1000 * 60 * 60 * 1}); // 1 hours
 
 app.use(async (req, res) => {
     if (req.url.startsWith('/stream/')) {

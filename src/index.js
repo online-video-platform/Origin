@@ -17,6 +17,17 @@ let cachePath = process.env.CACHE_PATH || '/cached/';
 const app = express();
 const target = process.env.TARGET || 'http://nginx:80';
 const proxy = httpProxy.createProxyServer({ target });
+async function downloadRemoteFile(unfinishedDownloadPath, cachedDownloadPath, targetUrl){
+    let cachedDownloadStream = fs.createWriteStream(unfinishedDownloadPath);
+    let fetching = await fetch(targetUrl);
+    console.log('Downloading from', targetUrl);
+    let arrayBuffer = await fetching.arrayBuffer();
+    console.log('Downloaded', arrayBuffer.byteLength);
+    let buffer = Buffer.from(arrayBuffer);
+    cachedDownloadStream.write(buffer);
+    cachedDownloadStream.end();
+    fs.renameSync(unfinishedDownloadPath, cachedDownloadPath);
+};
 
 app.use(async (req, res) => {
     if (req.url.startsWith('/stream/')) {
@@ -36,15 +47,7 @@ app.use(async (req, res) => {
             if (fs.existsSync(cachedDownloadPath)) {
                 console.log('Downloaded file already exists, ', cachedDownloadPath);
             } else {
-                let cachedDownloadStream = fs.createWriteStream(unfinishedDownloadPath);
-                let fetching = await fetch(target + req.url);
-                console.log('Downloading from', target + req.url);
-                let arrayBuffer = await fetching.arrayBuffer();
-                console.log('Downloaded', arrayBuffer.byteLength);
-                let buffer = Buffer.from(arrayBuffer);
-                cachedDownloadStream.write(buffer);
-                cachedDownloadStream.end();
-                fs.renameSync(unfinishedDownloadPath, cachedDownloadPath);
+            await downloadRemoteFile(unfinishedDownloadPath, cachedDownloadPath, target + req.url);
             }
             res.sendFile(cachedDownloadPath);
         }

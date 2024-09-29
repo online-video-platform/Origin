@@ -37,11 +37,15 @@ async function downloadRemoteFile(unfinishedDownloadPath, cachedDownloadPath, ta
     }, 1000);
     let fetching = await fetch(targetUrl);
     console.log('Downloading from', targetUrl);
-    let arrayBuffer = await fetching.arrayBuffer();
-    console.log('Downloaded', arrayBuffer.byteLength);
-    let buffer = Buffer.from(arrayBuffer);
-    cachedDownloadStream.write(buffer);
-    cachedDownloadStream.end();
+    // pipe the result stream into cachedDownloadStream
+    fetching.body.pipe(cachedDownloadStream);
+    // wait for the stream to finish
+    await new Promise((resolve, reject) => {
+        fetching.body.on('end', () => {
+            clearInterval(interval);
+            resolve();
+        });
+    });
     fs.renameSync(unfinishedDownloadPath, cachedDownloadPath);
 };
 let downloadRemoteFileMemoized = memoize(downloadRemoteFile);
